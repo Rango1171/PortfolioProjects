@@ -1,0 +1,95 @@
+````{r}
+# Final Presentation Code
+# Section 1: Introduction
+# Sec 2: Literature Review
+# Sec 3: Data
+# Sec 4: Empirical Methodology
+# Sec 5: Results
+# Sec 6: Conclusion
+# Sec 7: Bibliography
+# Sec 8: Appendix
+
+library(quantmod)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(stats)
+library(gtrendsR)
+library(quantmod)
+library(lubridate)
+library(gapminder)
+library(ROCR)
+library(corrplot)
+library(languageserver)
+library(lubridate)
+library(forecast)
+library(TTR)
+library(vars)
+library(tseries)
+library(randomForest)
+rm(list=ls())
+source("https://bigblue.depaul.edu/jlee141/econdata/R/func_tslib.R")
+
+
+getSymbols("UNRATE", src = "FRED", from ="1955-01-01")        # Unemployment rate
+unrate_ts <- ts(coredata(UNRATE$UNRATE), start = c(1955,1), frequency = 12)
+plot(unrate_ts)
+
+getSymbols("GDP", src = "FRED", from = "1955-01-01")          # GDP Data
+expanded_gdp <- rep(GDP, each = 3)                            # Expanded quarterly GDP to data to monthly
+gdp_ts <- ts(coredata(expanded_gdp), start = c(1955,1), frequency = 12)
+plot(gdp_ts)
+
+getSymbols("CPALTT01USM657N", src = "FRED", from = "1955-01-01")        # Consumer Index
+consumer_ts <- ts(coredata(CPALTT01USM657N), start = c(1955,1), frequency = 12)
+plot(consumer_ts)
+
+getSymbols("IRLTLT01USM156N", src = "FRED", from = "1955-01-01")        # Inflation Index
+inflation_ts <- ts(coredata(IRLTLT01USM156N), start = c(1955,1), frequency = 12)
+plot(inflation_ts)
+````
+
+````{r}
+# Combine Data from data frame
+indata_ts <- ts(cbind(unrate_ts,consumer_ts,inflation_ts,gdp_ts), start=c(1955,1), frequency = 12)
+colnames(indata_ts) <- c("Unemployment_Rate","consumer_data", "Inflation","GDP" )
+plot(indata_ts)
+
+acf(diff(unrate_ts))
+pacf(diff(unrate_ts))
+indata_ts <- na.omit(indata_ts)
+
+#Train & Test Data
+indata_train <- window(indata_ts, end=c(2017,12))
+indata_test <- window(indata_ts, start=c(2018,1))
+indata_test_y <- indata_test[,1]
+
+# VAR Model Lag Selection
+var_lag_selection <- VARselect(indata_train, lag.max = 16, type = "both")
+var_lag_selection
+optimal_lag <- var_lag_selection$selection["AIC(n)"]
+var_model <- VAR(indata_train, p = optimal_lag, type = "both")
+var_forecast <- forecast(var_model, h=3)
+summary(var_model)
+# plot(var_model)
+# plot(var_lag_selection, xlabel = "Unemployment_Rate", ylabel = "Inflation", zlab)
+
+# Causality Test
+granger_causality_test <- causality(var_model, cause = "Inflation")
+print(granger_causality_test)
+
+# Analyzing Impulse Response Function
+IRF <- irf(var_model, impulse = "Inflation", response = "Unemployment_Rate")
+plot(IRF)
+
+# Forecast for 12 months
+var_forecast <- predict(var_model, n.ahead = 12)
+
+plot(var_forecast$fcst$Unemployment_Rate[,1])
+lines(var_forecast$fcst$Unemployment_Rate[,1], col = "blue")
+
+plot(var_forecast$fcst$GDP[,1])
+lines(var_forecast$fcst$GDP[,1], col = "red")
+````
