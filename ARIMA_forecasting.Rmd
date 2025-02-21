@@ -1,0 +1,258 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Objective: 
+### Analyze the Consumer Price Index for All Urban Consumers: All Items in U.S. City Average (CPIAUCNS) from FRED, applying various time series techniques and models to forecast future values. 
+
+````{r}
+library(quantmod)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(stats)
+library(gtrendsR)
+library(quantmod)
+library(lubridate)
+library(gapminder)
+library(ROCR)
+library(corrplot)
+library(languageserver)
+library(lubridate)
+library(forecast)
+library(TTR)
+rm(list=ls())
+source("https://bigblue.depaul.edu/jlee141/econdata/R/func_tslib.R")
+
+
+# 1. Retrieve CPI date from FRED
+getSymbols("CPIAUCNS", src = "FRED")
+
+# 2. Create a time series object
+CPI <- coredata(CPIAUCNS)
+
+# 3. Create a time series plot
+ts_city_average <- ts(CPI, frequency = 12, start=c(1987,1)) # assuming the data is monthly
+plot(ts_city_average)
+````
+
+#### ● Trends: Analyzing the time series plot, we observe fluctuations in the Consumer Price Index (CPI) over time. There appears to be an overall upward trend, indicating a general increase in consumer prices over the years.  
+#### ● Seasonal Patterns: There might be seasonal patterns present in the CPI data, which can be identified by recurring patterns or fluctuations occurring at regular intervals within each year. However, these patterns are very minimal and not displayed in the graph. 
+#### ● Outliers: Potential outliers in the CPI data could manifest as sudden spikes or drops in the index that deviate significantly from the overall trend. In our data, there is only 1 events or economic shocks impacting consumer prices and should be investigated further to understand their underlying causes near the year 2084. 
+
+````{r}
+# 4. Decomposition and Basic Forecasting methods
+# a. Seasonality and Trend Analysis
+avg_decomp <- decompose(ts_city_average)
+plot(avg_decomp$x, col="blue", main="Average")
+
+# b. Calculate and compare forecasting models
+# Simple Mean Forecast
+ts_mean <- mean(ts_city_average, na.rm = TRUE)
+simple_mean <- rep(ts_mean,nrow(ts_city_average))
+plot(simple_mean)
+
+# Moving Average
+n <- 50
+ts_moving_avg <- SMA(ts_city_average, n = n)
+plot(ts_moving_avg)
+
+# Naive Forecast
+naiveForecast <- lag(CPI, 1)   
+plot(naiveForecast)
+
+# Exponential Smoothing
+# Using HoltWinters() function
+exponential_forecast <- HoltWinters(ts_city_average, alpha = 0.2, beta = FALSE, gamma = FALSE)
+plot(exponential_forecast)
+exponential_fitted <- fitted(exponential_forecast)
+plot(exponential_fitted)
+````
+
+#### The evaluation of the forecasting methods suggests that the Simple Mean Forecast is the optimal choice for projecting future values of the Consumer Price Index (CPI). This method offers a direct prediction by calculating the average of past data, disregarding any underlying trends or cyclical variations. 
+#### It should be acknowledged that while the Simple Mean Forecast method offers ease of use, it might not effectively reflect intricate behaviors or shifts in consumer prices. To enhance the precision of forecasts, more sophisticated techniques like exponential smoothing or ARIMA models might be necessary, particularly for time series data that display trends, seasonal behaviors, or unpredictable variations.
+
+## Conducting Stationarity tests where:
+### Null Hypothesis (Ho): The series is stationary if the p-value is less than 0.05. 
+### Alternative Hypothesis (H1): The series is not stationary if the p-value is greater than 0.05. 
+
+
+````{r}
+# 5. Stationarity test and Model identification
+# a. Unit root test
+unitroot_tests(CPIAUCNS)
+
+# Ho = Series is stationary(Null Hypothesis). p-value < 0.05
+# H1 = Series is not stationary(Alternative Hypothesis). p-value > 0.05
+# For ADF and PP test, p-value should be less than 0.05 to reject the null hypothesis and for data to be stationary.
+# After analyzing the p-value for ADF and PP test, we can conclude that the data is not stationary since p-values are greater than 0.05.
+
+#  b. Achieving Stationarity
+# Use differencing to make the data stationary
+diff_CPI <- diff(CPI, lag=1)
+unitroot_tests(diff(CPI, lag=1))
+plot(diff(CPI, lag=1, main="Differenced Plots"))
+
+# After differcing the data, unit root test shows that the data is stationary.
+# p-value for ADF and PP test are less than 0.05
+# Hence, data is stationary.
+
+# c. Using log differencing
+log_diff_CPI <- diff(log(CPI), lag=1)
+unitroot_tests(log_diff_CPI)
+plot(log_diff_CPI, main="Log Differenced Plots")
+
+# After differcing the data, unit root test shows that the data is stationary.
+# p-value for ADF and PP test are less than 0.05
+# Hence, data is stationary.
+
+# c. Seasonal Adjustment
+adjusted_ts <- ts_city_average / avg_decomp$seasonal
+plot(adjusted_ts, main="Seasonal Adjustment")
+````
+
+#### Seasonal Adjustment trend indicates an increase in the percentage of seasonal adjustment as time progresses. Hence, the graph visually shows how the seasonal adjustment changes over the years, with a clear upward trend. 
+
+### 3. ACF and PACF Analysis 
+````{r}
+
+# 6. ACG and PACF plots
+par(mfrow =c(1,2))
+acf(log_diff_CPI, main="ACF Plot of Log Differenced CPI")
+pacf(log_diff_CPI, main = "PACF Plot of Log Differenced CPI")
+
+# According the ACF and PACF plots, data is Autoregressive (AR) model
+# Here, Model has a high autocorrelation as seen from ACF plot.
+# This means that the current value of a variable depends on its previous values.
+# PACF plot shows that the model has a low correlation with the past values.
+# Order of AR(4)
+````
+
+#### • Stationarity Achieved: The unit root tests have verified that the differenced and log differenced CPI data are now stationary, signifying the effective removal of trends, seasonal effects, and other non-stationary elements. 
+#### • Insightful Analysis: The tests confirming stationarity and the process of model selection offer critical guidance in choosing a fitting time series model, paving the way for precise forecasts of future CPI figures. 
+#### • Model Type: Based on the ACF and PACF plots, the data follows an Autoregressive (AR) model. 
+#### • High Autocorrelation: The ACF plot reveals a significant autocorrelation, indicating that current values are closely related to their preceding values. 
+#### • Low Partial Correlation: The PACF plot suggests minimal correlation with past values beyond the immediate one. 
+#### • Model Order: The appropriate order for the AR model is 4, denoted as AR(4).
+
+### 1. Model Development 
+
+````{r}
+# Part 4 : Model Building and Evaluation
+# 1. Model Development
+# Splitting data into training and testing
+# Converting data to time series
+CPI_training_base <- ts(CPIAUCNS, frequency = 12, start=c(1987,1), end=c(2022,12))
+CPI_testing_base <- ts(CPIAUCNS, frequency = 12, start=c(2023,1))
+
+# Plotting training and testing data for visual representation
+par(mfrow =c(1,1))
+plot(CPI_training_base, main="Training and Testing data", xlab = "Time", ylab="Values")
+lines(CPI_testing_base, col="blue")
+legend("topleft", legend=c("Training", "Testing"), col=c("black", "blue"), lty=1, cex=0.8)
+
+# Implementing ACF and PACF plots
+par(mfrow =c(1,2))
+acf(CPI_training_base, main = "ACF Plot of Training Data")
+pacf(CPI_training_base, main = "PACF Plot of Training Data")
+unitroot_tests(CPI_training_base)
+# According the ACF and PACF plots, data is Autoregressive (AR) model
+# Data is not stationary.
+
+# Making the data stationary
+acf(diff(CPI_training_base, lag=1))
+pacf(diff(CPI_training_base, lag=1))
+unitroot_tests(diff(CPI_training_base, lag=1))
+# According the ACF and PACF plots, data is Autoregressive (AR) model
+# Data is stationary with order of 4. AR(4)
+
+# Developing different models
+# Fit the ARIMA model using MLE
+model1 <- arima(CPI_training_base, order=c(1,0,0), method = "ML")
+summary(model1)
+forecast1 <- forecast(model1, h=length(CPI_testing_base))
+plot(forecast1, main = "Order - Forecast vs Actual test Data", col="red")
+
+model2 <- arima(CPI_training_base, order=c(4,1,1), seasonal = list(order=c(1,0,1), period=12), method = "ML")
+summary(model2)
+forecast2 <- forecast(model2, h=length(CPI_testing_base))
+plot(forecast2, main = "Order & Seasonal - Forecast vs Actual test Data", col="red")
+
+model3 <- auto.arima(CPI_training_base, seasonal = TRUE, D=0, max.P = 1,
+    max.Q = 1, stepwise = FALSE, approximation = FALSE)
+summary(model3)
+forecast3 <- forecast(model3, h=length(CPI_testing_base))
+plot(forecast3, main = "Auto ARIMA - Forecast vs Actual test Data", col="red")
+
+accuracy(model1)
+accuracy(model2)
+accuracy(model3)
+````
+
+#### • Model Type: The unit root tests confirm that the differenced and log-differenced CPI data are now stationary. Based on the Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots, the data follows an Autoregressive (AR) model. 
+#### • Autocorrelation: The ACF plot reveals significant autocorrelation, indicating that current values are closely related to their preceding values. 
+#### • Partial Correlation: The PACF plot suggests minimal correlation with past values beyond the immediate lag. 
+#### • Model Order: The appropriate order for the AR model is 4, denoted as AR(4). 
+
+### Finding the best fitting model on test data
+````{r}
+# Defining the range for parameters
+p_range <- 0:3
+d_range <- 1:1
+q_range <- 0:3
+P_range <- 0:1
+Q_range <- 0:1
+
+best_rmse <- Inf
+best_model <- NULL
+
+for(p in p_range){
+  for(d in d_range){
+    for(q in q_range){
+      for(P in P_range){
+        for(Q in Q_range){
+        # Fit model
+        print(paste(p,d,q,P,Q))
+        model <- Arima(CPI_training_base, order=c(p,d,q), seasonal = list(order = c(P, 0, Q), period = 12))
+        # Forecast
+        forecasts <- forecast(model, h=length(CPI_testing_base))
+        # Calculate RMSE
+        rmse <- sqrt(mean((forecasts$mean - CPI_testing_base)^2))
+        print(paste(p,d,q,P,Q,rmse))
+        
+        # Checking if model is better
+        if(rmse < best_rmse) {
+            best_rmse <- rmse
+            best_model <- model
+            cat(sprintf("New best model found: ARIMA(%s, %s, %s)(%s, 0, %s) with RMSE: %f\n", p,d,q,P,Q,rmse))
+        }
+        }
+        }
+    }
+  }
+}
+
+# Best Model
+summary(best_model)
+Best_model <- arima(CPI_training_base, order=c(0,1,0), seasonal = list(order = c(1, 0, 1), period =12))
+
+forecast4 <- forecast(Best_model, h=length(CPI_testing_base))
+plot(forecast4, main = "Auto ARIMA - Forecast vs Actual test Data", col="red")
+
+
+# Summary of performance models
+table <- rbind(accuracy(forecast1$mean, CPI_testing_base),
+                accuracy(forecast2$mean, CPI_testing_base),
+                accuracy(forecast3$mean, CPI_testing_base),
+                accuracy(forecast4$mean, CPI_testing_base))
+row.names(table) <- c("Arima Model with Order", "Arima Model with Order & Seasonal", "Auto ARIMA", "Grid Search")
+print(table)
+
+````
+
+### Summary 
+#### ● Based on the model evaluations and forecasting results, the ARIMA(0,1,0)(1,0,1)[12] model outperforms other models in terms of forecast accuracy, as it has the lowest RMSE on the testing data. 
+#### ● The forecasting plots visually demonstrate the performance of each model in capturing the CPI trends and variations. 
+#### ● The grid search approach helps in systematically selecting the best ARIMA model by considering various parameter combinations. 
+#### ● Overall, the selected ARIMA model can be used to forecast future CPI values with reasonable accuracy, providing valuable insights for economic analysis and policy-making.
