@@ -1,0 +1,27 @@
+search:
+  roles:
+    - "Data Engineer"
+    - "Project Manager"
+  language: "en"
+  max_jobs_per_search: 20
+  days_old: 7
+
+  priority_countries:
+    - NL  # Netherlands
+    - SE  # Sweden
+    - ES  # Spain
+
+  extra_countries: []
+
+  min_match_score: 80
+  resume_for_sponsorship: ["Yes", "Unknown"]
+
+output:
+  excel_dir: "output/NL-SW-SP_Folder/excel"
+  resumes_dir: "output/NL-SW-SP_Folder/resumes"
+  seen_jobs_file: "output/seen_jobs.json"  # shared dedup list across all runs
+
+google_drive:
+  folder_id: ""  # Set via GOOGLE_DRIVE_FOLDER_ID in .env
+  credentials_file: "credentials.json"
+  token_file: "token.json"

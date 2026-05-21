@@ -1,0 +1,69 @@
+search:
+  roles:
+    - "Data Engineer"
+    - "Project Manager"
+  # Jobs must be posted in English
+  language: "en"
+  # Max jobs to fetch per role per source per run (keep low to avoid rate limits)
+  max_jobs_per_search: 20
+  # Only jobs posted in the last N days (use 7 for testing, 1 for daily runs)
+  days_old: 7
+
+  # Countries to search — Indeed will cycle through these for European results.
+  # Priority countries are searched FIRST and always included.
+  # Add/remove country codes here to control which countries you target.
+  priority_countries:
+    - NL  # Netherlands
+    - DE  # Germany
+    - IE  # Ireland
+    - SE  # Sweden
+    - DK  # Denmark
+    - NO  # Norway
+    - LU  # Luxembourg
+    - CH  # Switzerland
+    - GB  # UK
+
+  # Additional countries searched after priority ones (if quota allows)
+  extra_countries:
+    - AT  # Austria
+    - BE  # Belgium
+    - FR  # France
+    - FI  # Finland
+    - CZ  # Czech Republic
+    - PL  # Poland
+    - PT  # Portugal
+    - ES  # Spain
+    - IT  # Italy
+    - RO  # Romania
+    - GR  # Greece
+    - HU  # Hungary
+    - BG  # Bulgaria
+    - HR  # Croatia
+    - CY  # Cyprus
+    - EE  # Estonia
+    - LV  # Latvia
+    - LT  # Lithuania
+    - MT  # Malta
+    - SK  # Slovakia
+    - SI  # Slovenia
+
+  # Minimum resume-to-job match score (0-100) required before generating a resume.
+  # Jobs below this threshold are still written to Excel for visibility, but skipped for resume generation.
+  min_match_score: 80
+
+  # Generate a tailored resume for jobs with these visa sponsorship statuses.
+  # Options: "Yes", "No", "Unknown"
+  # "Unknown" means the job description didn't mention sponsorship either way —
+  # most jobs will be Unknown because LinkedIn/Indeed descriptions are short.
+  # Recommended: ["Yes", "Unknown"] to avoid missing good opportunities.
+  resume_for_sponsorship: ["Yes", "Unknown"]
+
+output:
+  excel_dir: "output/excel"
+  resumes_dir: "output/resumes"
+  seen_jobs_file: "output/seen_jobs.json"
+
+google_drive:
+  folder_id: ""  # Set via GOOGLE_DRIVE_FOLDER_ID in .env
+  credentials_file: "credentials.json"
+  token_file: "token.json"
