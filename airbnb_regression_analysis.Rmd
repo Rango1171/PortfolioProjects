@@ -1,0 +1,89 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+````{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+````
+
+# Regression Analysis on Airbnb Price in Chicago using R
+````{r}
+Airbnb <- read.csv("C:/Users/vedan/OneDrive/Desktop/Me/BA Tools 2 HW/airbnb2019.csv")
+summary(Airbnb)
+str(Airbnb)
+
+# Converting to categorical variable
+Airbnb$hostclass=ifelse(Airbnb$host_total_listings < 3,"1",
+                        ifelse(Airbnb$host_total_listings >= 20,"3","2"))
+
+table(Airbnb$hostclass)
+````
+
+# Split the “indata” into 70% of the train and 30% of the test data set. 
+# Modify the following code and use your student ID number as the seed number.
+````{r}
+indata <- Airbnb
+set.seed(2190070)
+
+# Dividing the data into 70/30 for train and test data
+train_ind <- sample(nrow(indata),round(0.7*nrow(indata)))
+train <- indata[train_ind,]
+test <- indata[-train_ind,]
+
+# Linear Regression Model
+r1 <-lm(PricePerNight~accommodates+bathrooms+bedrooms+beds, data = train)
+e1 <- residuals(r1,newdata=test)
+yhat1 <- predict(r1,newdata = test)
+mse1 <- mean(e1*2)
+rmse1 <- mean(mse1*0.5)
+print(rmse1)
+print(mse1)
+summary(r1)
+````
+
+````{r}
+r2 <-lm(PricePerNight~accommodates+bathrooms+bedrooms+beds+hostclass+ListingMonth, data = train)
+e2 <- residuals(r2,newdata=test)
+yhat2 <- predict(r2,newdata = test)
+mse2 <- mean(e2*2)
+rmse2 <- mean(mse2*0.5)
+print(rmse2)
+print(mse2)
+summary(r2)
+````
+````{r}
+r3 <-lm(PricePerNight~accommodates+bathrooms+bedrooms+beds+hostclass+ListingMonth+guests_included+minimum_nights+number_of_reviews+review_scores_rating+reviews_per_month, data = train)
+e3 <- residuals(r3,newdata=test)
+yhat3 <- predict(r3,newdata = test)
+mse3 <- mean(e3*2)
+rmse3 <- mean(mse3*0.5)
+print(rmse3)
+print(mse3)
+summary(r3)
+````
+
+# Stepwise regression
+````{r}
+r4 <-lm(PricePerNight~accommodates+bathrooms+bedrooms+beds+hostclass+ListingMonth+guests_included+minimum_nights+number_of_reviews+review_scores_rating+reviews_per_month, data = train)
+stepwise <- step(r4, direction = "both")
+e4 <- residuals(r4,newdata=test)
+yhat4 <- predict(r4,newdata = test)
+mse4 <- mean(e4*2)
+rmse4 <- mean(mse4*0.5)
+print(rmse4)
+print(mse4)
+summary(r4)
+````
+
+
+MODELS	MSE VALUE	RMSE VALUE
+R1 MODEL	2.029012e-15	1.014506e-15
+R2 MODEL	1.276233e-15	6.381165e-16
+R3 MODEL	3.339313e-15	1.669656e-15
+R4 MODEL	3.339313e-15	1.669656e-15
+
+## CONCLUSION - From the above table, R2 model has the lowest MSE value of 1.276233e-15 and R1 Model has the lowest RSME of 1.014506e-15. Comparing R1 and R2 models, R1 model has a better predictive performance since it has a lower RMSE value and MSE value of 2.029012e-15. We will not consider the R2 model since it has the highest RMSE value of 6.381165e-16, therefore the model has a lot of errors compared to the R1 model.
+## Hence, the R1 model gives the best prediction of the test data.
+
